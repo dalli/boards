@@ -10,8 +10,10 @@
 ## 결정
 
 - 원본/썸네일 바이너리는 MinIO(S3 호환)에 저장, 메타데이터(`storage_key`/`thumbnail_key` 등)는 DB.
-- 업로드/다운로드는 **presigned URL**(단기 만료)로 처리.
+- **업로드는 백엔드 경유(A-02 결정)**: 클라이언트가 파일을 API로 보내고 service가 검증·썸네일 생성 후 S3에 PUT. 클라이언트 직접 presigned PUT은 사용하지 않는다.
+- **다운로드만** 단기 presigned GET URL(TTL 5분, GET·키 바인딩, S-06)로 처리.
 - 썸네일은 **업로드 시 서버(Pillow)에서 생성**해 별도 키로 저장.
+- DB-S3 정합성은 PENDING→COMMITTED + 조정 잡(ADR-0005).
 
 ## 대안
 

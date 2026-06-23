@@ -10,22 +10,43 @@
 
 Python 3.12 + FastAPI + SQLAlchemy/Alembic + PostgreSQL 16 + MinIO(S3) + Pillow / React 18 + Vite + TS. 인증 자체 구현(JWT, role).
 
-## 수락 기준 (Acceptance Criteria)
+## 수락 기준 (Acceptance Criteria) — 측정 가능 형태 (P-02)
 
-- [ ] AC1. USER/ADMIN 역할 분리 + JWT 인증 동작.
-- [ ] AC2. ADMIN이 NOTICE/GENERAL/IMAGE 게시판 생성 가능.
-- [ ] AC3. NOTICE: ADMIN만 작성, USER 읽기 전용.
-- [ ] AC4. GENERAL: 인증 사용자 작성+첨부 업로드, 타인 읽기+다운로드.
-- [ ] AC5. IMAGE: 1개 이상 이미지 첨부 강제, 서버 썸네일 생성.
-- [ ] AC6. 이미지 게시물 썸네일 카드 그리드 → 카드 선택 시 원본 라이트박스.
-- [ ] AC7. 게시물/댓글 수정·삭제는 작성자 또는 ADMIN만.
-- [ ] AC8. §3.4 아키텍처 산출물 + ADR이 docs/에 존재.
+각 AC는 검증 가능한 관찰 결과(상태 코드/응답/테스트)로 기술한다.
+
+- [ ] AC1. 인증: `POST /auth/signup`→201, `POST /auth/login`(정상)→200+JWT, (오답)→401. role=USER가 ADMIN 전용 엔드포인트 호출 시 403. (대응 테스트 존재)
+- [ ] AC2. `POST /admin/boards`로 ADMIN이 type∈{NOTICE,GENERAL,IMAGE} + read_visibility∈{PUBLIC,AUTHENTICATED} 게시판 생성→201. 비ADMIN→403.
+- [ ] AC3. NOTICE 게시판: 비ADMIN `POST /boards/{id}/posts`→403, ADMIN→201. read_visibility=PUBLIC이면 비인증 GET→200.
+- [ ] AC4. GENERAL: 인증 사용자 글작성+첨부 업로드→201. 다운로드는 read_visibility 검사 후 presigned GET URL(200) 반환, 비인가 읽기→401/403.
+- [ ] AC5. IMAGE: 이미지 0개로 생성 시 422. 정상 생성 시 각 첨부에 `thumbnail_key`가 채워짐(서버 Pillow 생성). 마지막 이미지 삭제 시 422(E-01 불변식).
+- [ ] AC6. 이미지 게시물 GET 응답이 썸네일 URL 배열을 포함(그리드용), `GET /attachments/{id}/original-url`이 원본 presigned GET 반환(라이트박스용).
+- [ ] AC7. 게시물/댓글 PUT·DELETE: 작성자 본인/ADMIN→2xx, 타인→403. 동시 수정은 낙관적 잠금으로 충돌 시 409(E-05).
+- [ ] AC8. §3.4 아키텍처 산출물 + ADR(0001~0006)이 docs/에 존재(점검 스크립트 통과).
+- [ ] AC9. 목록 API는 페이지네이션 계약(커서 기반, limit 상한, created_at DESC 안정 정렬)을 따른다(E-06).
 
 ## 아키텍처 방향 (Architecture Direction)
 
 - backend 3계층(api→service→repository/model), 인가는 service 계층 의존성으로 강제.
-- 공유 계약 = OpenAPI, SoT=backend(`backend/openapi.json`), frontend는 생성 클라이언트 소비(§5.1).
-- 파일은 MinIO에 저장, 메타데이터는 DB. 썸네일은 업로드 시 Pillow로 생성.
+- **읽기/쓰기 권한 분리(E-04)**: 쓰기=`Board.type`, 읽기=`Board.read_visibility`(PUBLIC/AUTHENTICATED). ADMIN이 게시판 생성 시 지정.
+- **업로드 백엔드 경유(A-02)**: 파일 업로드는 service 경유(검증·썸네일·정합성). 다운로드만 presigned GET(TTL 5분, S-06).
+- **DB-S3 정합성(A-03, ADR-0005)**: PENDING→COMMITTED + 조정/orphan 정리 잡(E-02).
+- **삭제 시맨틱(ADR-0006)**: User 소프트삭제, Post/Comment/Board 하드삭제(애플리케이션 캐스케이드 + S3 정리). FK는 RESTRICT 기본(A-04).
+- 파일은 MinIO, 메타데이터는 DB. 썸네일은 업로드 시 Pillow 생성.
+
+### 공유 계약 소유권 (§5.1, A-01)
+
+| 항목 | 값 |
+| --- | --- |
+| contract_id | `boards-api-openapi` |
+| source_of_truth_path | `backend/openapi.json` (FastAPI 생성) |
+| owner_role | `backend` |
+| owner_human_approver | (인간 승인자 지정 필요 — 승인 시 기입) |
+| producer_paths | `backend/app/api/**`, `backend/openapi.json` |
+| consumer_paths | `frontend/src/api/generated/**` |
+| regen_command | backend: `python -m app.export_openapi > openapi.json`; frontend: `npm run gen:api` |
+| drift_check_command | `git diff --exit-code backend/openapi.json` + 프론트 생성물 재생성 후 diff 0 |
+
+> 생성물(`frontend/src/api/generated/**`)은 수동 수정 금지(§5.1 드리프트 제어).
 
 ## Phase 분해 (§6.1)
 
@@ -36,6 +57,7 @@ Python 3.12 + FastAPI + SQLAlchemy/Alembic + PostgreSQL 16 + MinIO(S3) + Pillow 
 - 산출물: 디렉토리 구조, `.env.example`, lint/test/coverage 명령 동작.
 - 수락 기준: `<PROJECT_DECLARED_LINT_CMD>`/`<PROJECT_DECLARED_TEST_CMD>`가 빈 통과, docker-compose up 성공.
 - 의존성: 없음. (선행: git 저장소·dev 브랜치 — 인간 승인 필요)
+- ⚠️ **CI/CD 설정은 AGENTS.md §4 보호 대상(P-03)** — Phase 0의 CI 골격 작성·변경은 인간 승인을 거친다.
 
 ### Phase 1 — 인증 & 사용자
 - 목표: 회원가입/로그인/JWT/role 미들웨어, User 모델·마이그레이션.
@@ -124,5 +146,16 @@ S-01(JWT 저장 전략 단일화), S-02(토큰 TTL·로그아웃·폐기 정의)
 
 ### 조정 결과 요약
 
-- Accepted: 22건, Rejected: 1건(A-06), Escalated(인간 결정): A-02·E-04(문서 내 명시).
-- **다음 행동**: 위 Accepted 항목을 반영해 docs/plan을 v2로 갱신 → 문서 해시 변경으로 본 리뷰 무효화 → **재검증 또는 인간 승인자 판정** 필요. blocking 미해소 상태에서는 구현 착수 불가.
+- Accepted: 22건, Rejected: 1건(A-06), Escalated(인간 결정): A-02·E-04.
+
+### 인간 결정 반영 (v2)
+
+- **A-02 → 백엔드 경유 업로드**로 결정. system/sequence/security/ADR-0003/plan 정합 완료.
+- **E-04 → Board.read_visibility(PUBLIC/AUTHENTICATED)** 신설. ADMIN이 게시판 생성 시 지정. db-schema/security/ADR-0002/AC 반영 완료.
+- **배포 → docker-compose**(dev/staging/prod 동일 compose + env 오버라이드). deployment.md 반영 완료.
+
+### v2 반영 현황 (Accepted 22건)
+
+- Blocking: A-01(계약 소유권 표 추가)·A-02(업로드 흐름 단일화)·A-03(ADR-0005 정합성)·E-01(IMAGE 불변식 전구간) **모두 반영**. P-01은 인간 승인으로 종료.
+- High/Medium: S-01~S-06·A-04·A-05·E-02·E-03·E-05·E-06·Y-01(multipart defer)·Y-02·Y-03·P-02·P-03·P-04 **모두 반영**(security.md/db-schema.md/data.md/deployment.md/ADR-0005,0006/plan AC).
+- **신선도(§3.1-2)**: 문서가 v2로 갱신되어 기존 codex 리뷰는 무효화됨 → **재검증 권장 후 인간 최종 승인**. blocking 해소를 인간 승인자가 확인하기 전까지 구현 착수 불가.

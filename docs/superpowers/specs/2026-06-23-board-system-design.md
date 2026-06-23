@@ -49,19 +49,22 @@ React(Vite/TS) ──HTTP/JSON(JWT)──> FastAPI ──> PostgreSQL (메타데
 
 상세 erDiagram은 `docs/architecture/db-schema.md` 참조.
 
-- **User**: id, email(unique), password_hash, role(enum: USER/ADMIN), created_at
-- **Board**: id, name, slug(unique), type(enum: NOTICE/GENERAL/IMAGE), description, created_at
+> **v2 갱신(codex 교차검증 반영)**: 아래 모델/권한 표는 초안 기준이며, 확정 모델은 [docs/architecture/db-schema.md](../../architecture/db-schema.md) 및 [plan.md](../../../plan.md) v2를 따른다. 주요 변경: User에 `deleted_at`(소프트삭제), Board에 **`read_visibility`(PUBLIC/AUTHENTICATED, E-04)** 추가, Attachment/Post에 PENDING/COMMITTED 상태(A-03).
+
+- **User**: id, email(unique), password_hash, role(enum: USER/ADMIN), created_at, deleted_at(nullable)
+- **Board**: id, name, slug(unique), type(enum: NOTICE/GENERAL/IMAGE), **read_visibility(enum: PUBLIC/AUTHENTICATED)**, description, created_at
 - **Post**: id, board_id(FK), author_id(FK→User), title, content, created_at, updated_at
 - **Attachment**: id, post_id(FK), storage_key, original_name, content_type, size, is_image(bool), thumbnail_key(nullable), created_at
 - **Comment**: id, post_id(FK), author_id(FK→User), content, created_at
 
-### 권한 규칙 (Board.type 기반 분기)
+### 권한 규칙 (쓰기=Board.type, 읽기=Board.read_visibility, E-04)
 
-| type | 읽기 | 쓰기 | 첨부 규칙 |
-| --- | --- | --- | --- |
-| NOTICE | 전체(비로그인 포함 가능) | ADMIN만 | 선택적 |
-| GENERAL | 인증 사용자 | 인증 사용자 | 선택적, 다운로드 가능 |
-| IMAGE | 인증 사용자 | 인증 사용자 | **1개 이상 이미지 필수**, 썸네일 자동 생성 |
+| 축 | 분기 |
+| --- | --- |
+| 읽기 | read_visibility=PUBLIC → 전체(비로그인 포함) / =AUTHENTICATED → 인증 사용자 |
+| 쓰기(NOTICE) | ADMIN만 |
+| 쓰기(GENERAL/IMAGE) | 인증 사용자 |
+| IMAGE 첨부 | **1개 이상 이미지 필수**(생성·수정·삭제 전구간, E-01), 썸네일 자동 생성 |
 
 - 게시판 생성/삭제는 ADMIN만.
 - 게시물/댓글 수정·삭제는 작성자 본인 또는 ADMIN.
@@ -71,7 +74,7 @@ React(Vite/TS) ──HTTP/JSON(JWT)──> FastAPI ──> PostgreSQL (메타데
 각 시퀀스는 `docs/architecture/sequences/*.md`에 mermaid `sequenceDiagram`으로 작성.
 
 1. **인증**: 회원가입 → bcrypt 해시 저장 / 로그인 → JWT 발급 → 보호 엔드포인트 role 검사
-2. **게시물 작성 + 첨부**: presigned PUT 또는 멀티파트 업로드 → Attachment 레코드 생성 → IMAGE 게시판이면 Pillow 썸네일 생성·저장
+2. **게시물 작성 + 첨부**: 백엔드 경유 업로드(A-02) → PENDING Attachment 레코드 생성 → S3 업로드 → COMMITTED 전이 → IMAGE 게시판이면 Pillow 썸네일 생성·저장
 3. **이미지 게시판 조회**: 게시물 선택 → 썸네일 카드 그리드 → 카드 클릭 → 라이트박스(원본 presigned GET)
 4. **첨부 다운로드**: 첨부 목록 → presigned GET URL
 

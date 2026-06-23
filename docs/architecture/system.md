@@ -24,9 +24,12 @@ graph TB
   SVC --> IMG
   REPO --> PG
   IMG --> S3
-  SVC -->|presigned URL 발급| S3
-  SPA -.->|presigned GET/PUT| S3
+  SVC -->|업로드: 백엔드 경유 PUT| S3
+  SVC -->|다운로드: presigned GET 발급| S3
+  SPA -.->|다운로드만 presigned GET| S3
 ```
+
+> **업로드 흐름(A-02 결정)**: 파일 **업로드는 백엔드(service) 경유**로 처리한다(검증·썸네일 생성·정합성 제어 일원화). **다운로드만** 단기 presigned GET URL을 발급해 클라이언트가 직접 S3에서 받는다. 클라이언트 직접 presigned **PUT은 사용하지 않는다.**
 
 ## 컴포넌트 책임
 
