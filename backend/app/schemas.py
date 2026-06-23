@@ -97,6 +97,10 @@ class CommentCreateRequest(BaseModel):
     content: str = Field(min_length=1, max_length=5000)
 
 
+class CommentUpdateRequest(BaseModel):
+    content: str = Field(min_length=1, max_length=5000)
+
+
 class CommentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
