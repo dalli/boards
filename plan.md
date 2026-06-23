@@ -35,18 +35,13 @@ Python 3.12 + FastAPI + SQLAlchemy/Alembic + PostgreSQL 16 + MinIO(S3) + Pillow 
 
 ### 공유 계약 소유권 (§5.1, A-01)
 
-| 항목 | 값 |
-| --- | --- |
-| contract_id | `boards-api-openapi` |
-| source_of_truth_path | `backend/openapi.json` (FastAPI 생성) |
-| owner_role | `backend` |
-| owner_human_approver | (인간 승인자 지정 필요 — 승인 시 기입) |
-| producer_paths | `backend/app/api/**`, `backend/openapi.json` |
-| consumer_paths | `frontend/src/api/generated/**` |
-| regen_command | backend: `python -m app.export_openapi > openapi.json`; frontend: `npm run gen:api` |
-| drift_check_command | `git diff --exit-code backend/openapi.json` + 프론트 생성물 재생성 후 diff 0 |
+§5.1이 요구하는 컬럼 형식으로 기록한다.
 
-> 생성물(`frontend/src/api/generated/**`)은 수동 수정 금지(§5.1 드리프트 제어).
+| contract_id | source_of_truth_path | owner_role | owner_human_approver | producer_paths | consumer_paths | regen_command | drift_check_command |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `boards-api-openapi` | `backend/openapi.json` | `backend` | _(승인 시 기입 — §3.1-4 인간 승인자)_ | `backend/app/api/**`, `backend/openapi.json` | `frontend/src/api/generated/**` | backend: `python -m app.export_openapi > openapi.json` · frontend: `npm run gen:api` | `git diff --exit-code backend/openapi.json` + 프론트 생성물 재생성 후 `git diff --exit-code frontend/src/api/generated` |
+
+> 생성물(`frontend/src/api/generated/**`)은 수동 수정 금지(§5.1 드리프트 제어). `owner_human_approver`는 인간 최종 승인(§3.1-4) 시 기입한다.
 
 ## Phase 분해 (§6.1)
 
@@ -75,7 +70,7 @@ Python 3.12 + FastAPI + SQLAlchemy/Alembic + PostgreSQL 16 + MinIO(S3) + Pillow 
 - 의존성: Phase 2.
 
 ### Phase 4 — 첨부파일 (일반 게시판)
-- 목표: 업로드(MinIO presigned/멀티파트), Attachment 메타, presigned 다운로드, 타입·크기 검증.
+- 목표: **백엔드 경유 업로드**(A-02, presigned PUT·멀티파트 미사용 — Y-01 defer), PENDING→COMMITTED 정합성(ADR-0005), Attachment 메타, **다운로드 presigned GET**, 매직바이트·타입·크기 검증.
 - 수락 기준: AC4.
 - 의존성: Phase 3.
 
@@ -158,4 +153,33 @@ S-01(JWT 저장 전략 단일화), S-02(토큰 TTL·로그아웃·폐기 정의)
 
 - Blocking: A-01(계약 소유권 표 추가)·A-02(업로드 흐름 단일화)·A-03(ADR-0005 정합성)·E-01(IMAGE 불변식 전구간) **모두 반영**. P-01은 인간 승인으로 종료.
 - High/Medium: S-01~S-06·A-04·A-05·E-02·E-03·E-05·E-06·Y-01(multipart defer)·Y-02·Y-03·P-02·P-03·P-04 **모두 반영**(security.md/db-schema.md/data.md/deployment.md/ADR-0005,0006/plan AC).
-- **신선도(§3.1-2)**: 문서가 v2로 갱신되어 기존 codex 리뷰는 무효화됨 → **재검증 권장 후 인간 최종 승인**. blocking 해소를 인간 승인자가 확인하기 전까지 구현 착수 불가.
+- **신선도(§3.1-2)**: 문서가 v2로 갱신되어 기존 codex 리뷰는 무효화됨 → 재검증 수행(아래).
+
+## 교차 재검증 기록 v2 (Re-Review, §3.1-2)
+
+| 항목 | 값 |
+| --- | --- |
+| reviewer_id | codex (codex:codex-rescue, --fresh) |
+| model_id | gpt-5.x-codex (독립 모델) |
+| 검토 대상 커밋 | 88c30bb7537ce7835fcab92a5ac14cec65722728 (v2) |
+| draft 해시(plan.md, SHA-256) | 89c4f8756c11b96297b2c84263244e3acfe13a8d6a44d1d31dd64e3d24681ccc |
+| 재검토 시각(UTC) | 2026-06-23T08:00Z |
+| 결과 | 이전 BLOCKING 5건 PARTIALLY-RESOLVED, 신규 blocking 1건(NV2-001) 등 7건 신규 발견 |
+
+### v2 재검증 이의 처리 (§3.1-3) — 전부 Accepted, v3로 반영
+
+| ID | sev | 판정 | 조치(v3) |
+| --- | --- | --- | --- |
+| NV2-001 | **blocking** | Accepted | POST/ATTACHMENT에 `status(PENDING\|COMMITTED)` 컬럼 추가 — 스키마-설계 정합. |
+| A-03 잔여 | blocking | Accepted | status 컬럼으로 시퀀스/ADR-0005/스키마 생명주기 정합 완료. |
+| E-01 잔여 / NV2-002 | blocking/high | Accepted | UPDATE/DELETE 시퀀스 신설(attachment-delete-and-invariant.md), ATTACHMENT FK를 RESTRICT로 바꿔 **S3 삭제→행 삭제 순서** 강제. |
+| NV2-003 | high | Accepted | 로그인 시 `deleted_at` 사용자 배제(auth.md), email 부분 유니크 + 소프트삭제 시 즉시 비식별화(db-schema/ADR-0006). |
+| NV2-006 / Y-01 잔여 | high/med | Accepted | Phase 4 문구를 "백엔드 경유, presigned/멀티파트 미사용"으로 수정. |
+| A-01 잔여 | blocking | Accepted | 계약 소유권을 §5.1 컬럼 표 형식으로 재작성. owner_human_approver는 승인 시 기입. |
+| NV2-004 / P-02 잔여 | med/high | Accepted | 설계 spec의 구 GENERAL 문구·AC를 read_visibility 모델로 수정, 확정 AC=plan.md v2 명시. |
+| NV2-005 | med | Accepted | prod 시크릿은 `.env` 아닌 런타임 시크릿 주입으로 deployment.md 정정. |
+| A-04/E-03/E-05/E-06 잔여 | high/med | Accepted | FK 순서·version(낙관적 잠금)·status 포함 인덱스로 보강. |
+| NV2-007 | low | Accepted | 본 v2 재검증 결과를 plan에 기록(이 섹션)으로 해소. |
+| P-01 잔여 | blocking | Accepted | 본 v3 갱신 후 인간 최종 승인으로 종료 예정. |
+
+> v3 갱신으로 plan.md 해시가 다시 변경됨 → 본 v2 리뷰도 무효화. **남은 절차는 인간 최종 승인(§3.1-4)**. (추가 codex 라운드는 인간 판단으로 선택 가능)

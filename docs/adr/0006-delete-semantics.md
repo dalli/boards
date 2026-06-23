@@ -11,7 +11,10 @@ User/Board/Post/Comment/Attachment의 삭제 동작이 미결정 상태였다(da
 ## 결정
 
 - **User**: **소프트 삭제**(`deleted_at` 마킹). 작성한 Post/Comment는 보존(FK `RESTRICT`). 표시는 "탈퇴한 사용자".
-- **Post / Comment**: **하드 삭제**. Post 삭제 시 하위 Attachment(DB CASCADE) + S3 객체(애플리케이션 삭제).
+  - **이메일 즉시 비식별화**: 소프트 삭제 시 서비스가 `USER.email`을 비식별 값(예: `deleted+{id}@invalid.local`)으로 즉시 재작성한다. 이는 **소프트 삭제 시점에 동일 트랜잭션 내에서** 수행한다.
+  - 효과: 부분 유니크 인덱스(`WHERE deleted_at IS NULL`)에서 원래 이메일 주소가 해제되어 **재가입에 재사용 가능**해진다.
+  - 로그인 흐름은 `deleted_at IS NOT NULL` 사용자를 항상 제외한다.
+- **Post / Comment**: **하드 삭제**. Comment는 DB CASCADE. Attachment는 `RESTRICT`이므로 삭제 순서를 애플리케이션이 강제(NV2-002): **① S3 객체 삭제 → ② Attachment 행 삭제 → ③ Post 행 삭제**(단일 트랜잭션 경계, 실패분은 조정 잡 회수).
 - **Board**: **하드 삭제**, 단 FK가 `RESTRICT`이므로 애플리케이션이 하위(Post→Attachment/Comment + S3 객체)를 먼저 정리 후 Board 삭제(E-03).
 - **Attachment**: 하드 삭제. IMAGE 게시판은 마지막 이미지 삭제 거부(E-01 불변식).
 

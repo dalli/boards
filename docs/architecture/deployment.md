@@ -29,12 +29,14 @@ graph TB
 
 | 환경 | 용도 | 데이터 | 실행 방식 |
 | --- | --- | --- | --- |
-| dev | 로컬 개발 | 임시/시드 | 동일 compose 파일 + `.env.dev` |
-| staging | 통합 검증 | prod 유사 | 동일 compose 파일 + `.env.staging` |
-| prod | 운영 | 실데이터 | 동일 compose 파일 + `.env.prod` |
+| dev | 로컬 개발 | 임시/시드 | 동일 compose 파일 + `.env.dev`(비시크릿 설정) |
+| staging | 통합 검증 | prod 유사 | 동일 compose 파일 + `.env.staging`(비시크릿 설정) |
+| prod | 운영 | 실데이터 | 동일 compose 파일 + 런타임 시크릿 주입(시크릿은 `.env` 비커밋) |
 
-- dev/staging/prod 모두 **동일한 docker-compose 파일**을 사용하고, 환경별 차이는 `.env` 오버라이드(`.env.dev`/`.env.staging`/`.env.prod`)로 주입.
-- 시크릿은 `.env`에 평문 저장하지 않고 환경별 시크릿 주입 경로를 사용.
+- dev/staging/prod 모두 **동일한 docker-compose 파일**을 사용하고, 환경별 **비시크릿 설정** 차이는 `.env` 오버라이드(`.env.dev`/`.env.staging`/`.env.prod`)로 주입.
+- **dev/staging**: `.env.*` 파일은 **비시크릿 설정(non-secret config)** 용도로만 사용.
+- **prod**: 시크릿은 커밋된 `.env` 파일이 아니라 컨테이너 런타임의 시크릿 메커니즘(예: docker compose `secrets:` / 외부 시크릿 스토어 / 오케스트레이터가 주입하는 환경변수)으로 주입한다.
+- 어떤 환경에서도 시크릿을 `.env`에 평문으로 커밋하지 않는다.
 
 ## CI/CD
 

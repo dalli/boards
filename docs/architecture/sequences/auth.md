@@ -23,14 +23,19 @@ sequenceDiagram
   SPA->>API: POST /auth/login
   API->>SVC: authenticate(email, password)
   SVC->>DB: SELECT user by email
-  DB-->>SVC: user(password_hash, role)
-  SVC->>SVC: bcrypt.verify
-  alt 일치
-    SVC-->>API: JWT(access, sub=user_id, role)
-    API-->>SPA: 200 + token
-    SPA->>SPA: 토큰 보관
-  else 불일치
-    SVC-->>API: 401
+  DB-->>SVC: user(password_hash, role, deleted_at)
+  alt deleted_at 설정됨 (소프트 삭제)
+    SVC-->>API: 401 (계정 존재 비노출)
     API-->>SPA: 인증 실패
+  else 활성 사용자
+    SVC->>SVC: bcrypt.verify
+    alt 일치
+      SVC-->>API: JWT(access, sub=user_id, role)
+      API-->>SPA: 200 + token
+      SPA->>SPA: 토큰 보관
+    else 불일치
+      SVC-->>API: 401
+      API-->>SPA: 인증 실패
+    end
   end
 ```
