@@ -17,6 +17,7 @@ from sqlalchemy.pool import StaticPool
 import app.security as security_module
 from app.db import Base, get_db
 from app.main import create_app
+from app.storage import InMemoryStorageClient, get_storage
 
 
 @pytest.fixture(autouse=True)
@@ -62,13 +63,19 @@ def db_session() -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(db_session: Session) -> Iterator[TestClient]:
+def storage() -> InMemoryStorageClient:
+    return InMemoryStorageClient()
+
+
+@pytest.fixture
+def client(db_session: Session, storage: InMemoryStorageClient) -> Iterator[TestClient]:
     app = create_app()
 
     def _override_get_db() -> Iterator[Session]:
         yield db_session
 
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_storage] = lambda: storage
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

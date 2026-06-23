@@ -109,3 +109,23 @@ class CommentResponse(BaseModel):
     author_id: int
     content: str
     created_at: datetime
+
+
+# ---- Attachment ----
+
+
+class AttachmentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    post_id: int
+    original_name: str
+    content_type: str
+    size: int
+    is_image: bool
+    # presigned thumbnail URL (images only); populated by the service, not the ORM
+    thumbnail_url: str | None = None
+
+
+class OriginalUrlResponse(BaseModel):
+    url: str

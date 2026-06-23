@@ -39,3 +39,13 @@ class ConflictError(AppError):
 class ValidationFailedError(AppError):
     status_code = 422
     detail = "Validation failed"
+
+
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    detail = "Payload too large"
+
+
+class StorageError(AppError):
+    status_code = 502
+    detail = "Storage backend error"

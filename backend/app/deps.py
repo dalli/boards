@@ -17,6 +17,7 @@ from app.errors import AuthenticationError, PermissionDeniedError
 from app.models import Role, User
 from app.repository.user_repository import UserRepository
 from app.security import decode_access_token
+from app.storage import StorageClient, get_storage
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -70,3 +71,5 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 OptionalUser = Annotated["User | None", Depends(get_optional_user)]
 AdminUser = Annotated[User, Depends(require_admin)]
 DbSession = Annotated[Session, Depends(get_db)]
+# Storage dependency (overridden in tests with an in-memory fake).
+Storage = Annotated[StorageClient, Depends(get_storage)]

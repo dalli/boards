@@ -1,6 +1,55 @@
 {
   "components": {
     "schemas": {
+      "AttachmentResponse": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_image": {
+            "title": "Is Image",
+            "type": "boolean"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "post_id": {
+            "title": "Post Id",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "original_name",
+          "content_type",
+          "size",
+          "is_image"
+        ],
+        "title": "AttachmentResponse",
+        "type": "object"
+      },
       "BoardCreateRequest": {
         "properties": {
           "description": {
@@ -101,6 +150,36 @@
         ],
         "title": "BoardType",
         "type": "string"
+      },
+      "Body_create_post_with_attachments_boards__board_id__posts_with_attachments_post": {
+        "properties": {
+          "content": {
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "files": {
+            "default": [],
+            "items": {
+              "contentMediaType": "application/octet-stream",
+              "type": "string"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "Body_create_post_with_attachments_boards__board_id__posts_with_attachments_post",
+        "type": "object"
       },
       "CommentCreateRequest": {
         "properties": {
@@ -207,6 +286,19 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "OriginalUrlResponse": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "OriginalUrlResponse",
         "type": "object"
       },
       "PostCreateRequest": {
@@ -610,6 +702,53 @@
         ]
       }
     },
+    "/attachments/{attachment_id}/original-url": {
+      "get": {
+        "operationId": "get_original_url_attachments__attachment_id__original_url_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OriginalUrlResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Original Url",
+        "tags": [
+          "attachments"
+        ]
+      }
+    },
     "/auth/login": {
       "post": {
         "operationId": "login_auth_login_post",
@@ -930,6 +1069,63 @@
         ]
       }
     },
+    "/boards/{board_id}/posts/with-attachments": {
+      "post": {
+        "operationId": "create_post_with_attachments_boards__board_id__posts_with_attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "title": "Board Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_post_with_attachments_boards__board_id__posts_with_attachments_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Post With Attachments",
+        "tags": [
+          "attachments"
+        ]
+      }
+    },
     "/comments/{comment_id}": {
       "delete": {
         "operationId": "delete_comment_comments__comment_id__delete",
@@ -1187,6 +1383,106 @@
         "summary": "Update Post",
         "tags": [
           "posts"
+        ]
+      }
+    },
+    "/posts/{post_id}/attachments": {
+      "get": {
+        "operationId": "list_attachments_posts__post_id__attachments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "title": "Post Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttachmentResponse"
+                  },
+                  "title": "Response List Attachments Posts  Post Id  Attachments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Attachments",
+        "tags": [
+          "attachments"
+        ]
+      }
+    },
+    "/posts/{post_id}/attachments/{attachment_id}": {
+      "delete": {
+        "operationId": "delete_attachment_posts__post_id__attachments__attachment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "title": "Post Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "title": "Attachment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Attachment",
+        "tags": [
+          "attachments"
         ]
       }
     },

@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
 
 def _register_routers(app: FastAPI) -> None:
     """Routers are added per phase as their modules land."""
+    from app.api import attachments as attachments_api
     from app.api import auth as auth_api
     from app.api import boards as boards_api
     from app.api import posts as posts_api
@@ -35,6 +36,7 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(auth_api.router)
     app.include_router(boards_api.router)
     app.include_router(posts_api.router)
+    app.include_router(attachments_api.router)
 
 
 app = create_app()
