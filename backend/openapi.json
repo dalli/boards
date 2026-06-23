@@ -1,6 +1,107 @@
 {
   "components": {
     "schemas": {
+      "BoardCreateRequest": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "read_visibility": {
+            "$ref": "#/components/schemas/ReadVisibility"
+          },
+          "slug": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BoardType"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "type",
+          "read_visibility"
+        ],
+        "title": "BoardCreateRequest",
+        "type": "object"
+      },
+      "BoardResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "read_visibility": {
+            "$ref": "#/components/schemas/ReadVisibility"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BoardType"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "type",
+          "read_visibility",
+          "description",
+          "created_at"
+        ],
+        "title": "BoardResponse",
+        "type": "object"
+      },
+      "BoardType": {
+        "enum": [
+          "NOTICE",
+          "GENERAL",
+          "IMAGE"
+        ],
+        "title": "BoardType",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -34,6 +135,14 @@
         ],
         "title": "LoginRequest",
         "type": "object"
+      },
+      "ReadVisibility": {
+        "enum": [
+          "PUBLIC",
+          "AUTHENTICATED"
+        ],
+        "title": "ReadVisibility",
+        "type": "string"
       },
       "Role": {
         "enum": [
@@ -165,6 +274,92 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/admin/boards": {
+      "post": {
+        "operationId": "create_board_admin_boards_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BoardCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Board",
+        "tags": [
+          "boards"
+        ]
+      }
+    },
+    "/admin/boards/{board_id}": {
+      "delete": {
+        "operationId": "delete_board_admin_boards__board_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "title": "Board Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Board",
+        "tags": [
+          "boards"
+        ]
+      }
+    },
     "/admin/users/{user_id}/promote": {
       "post": {
         "description": "Y-02: an existing ADMIN promotes a USER to ADMIN.",
@@ -318,6 +513,83 @@
         "summary": "Signup",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/boards": {
+      "get": {
+        "operationId": "list_boards_boards_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BoardResponse"
+                  },
+                  "title": "Response List Boards Boards Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Boards",
+        "tags": [
+          "boards"
+        ]
+      }
+    },
+    "/boards/{board_id}": {
+      "get": {
+        "operationId": "get_board_boards__board_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "board_id",
+            "required": true,
+            "schema": {
+              "title": "Board Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Board",
+        "tags": [
+          "boards"
         ]
       }
     },

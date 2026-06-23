@@ -47,7 +47,7 @@ codex 재리뷰: high 5건 전건 RESOLVED · BLOCKING FINDINGS REMAINING: NO
 | ID | 분류(Security/Architecture/Scope/Risk/Other) | 확인 필요 사항 | 필요한 인간 판단 | 차단 여부 |
 | --- | --- | --- | --- | --- |
 | HCI-1 | Scope | Phase 0 CI/CD 워크플로(.github/workflows) 작성을 인간 결정에 따라 **생략**함(§4/P-03 보호 대상). | CI 골격을 언제·누가 추가할지, 커버리지 게이트를 CI에 강제할지 결정. | 비차단(합의된 생략) |
-| HCI-2 | Security | SEC-003: signup 중복 이메일 409가 계정 존재를 노출. 완전 비열거화는 이메일 인증(범위 밖) 전제로 **MVP 보류**. | 가입 경로 열거 방어를 MVP에 포함할지, 후속 phase로 둘지 승인. | 비차단(deferred) |
-| HCI-3 | Security | SEC-005: 로그인 rate-limit·인증 감사 로그 미구현(security.md S-05 설계만 존재). | 횡단 미들웨어를 어느 phase에서 구현할지, MVP 필수 여부 결정. | 비차단(deferred) |
+| HCI-2 | Security | SEC-003: signup 중복 이메일 409가 계정 존재를 노출. 완전 비열거화는 이메일 인증(범위 밖) 전제로 **MVP 보류**. | **인간 결정(2026-06-23): 후속 phase로 둠**(Cha Sangkug). | 비차단(deferred, 인간 승인) |
+| HCI-3 | Security | SEC-005: 로그인 rate-limit·인증 감사 로그 미구현(security.md S-05 설계만 존재). | **인간 결정(2026-06-23): 후속 phase로 둠**(Cha Sangkug). | 비차단(deferred, 인간 승인) |
 | HCI-4 | Architecture | OTH-002: 프론트 `apiFetch`는 전송 래퍼로 유지하고 계약 타입은 생성물(`generated/`)로 분리하기로 정함. | 이 분리 방침 승인(생성 타입과 전송 래퍼 공존). | 비차단 |
 | HCI-5 | Risk | dev/단위테스트는 SQLite, 운영은 Postgres. 부분 유니크 인덱스·enum 등 Postgres 전용 제약은 통합 테스트(후속)로 검증 예정. | Postgres 통합 테스트 도입 시점 확인. | 비차단 |
