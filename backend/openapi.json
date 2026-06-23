@@ -322,6 +322,69 @@
         "title": "PostCreateRequest",
         "type": "object"
       },
+      "PostDetailResponse": {
+        "description": "Post GET response including committed attachments with thumbnail URLs (AC6 grid).",
+        "properties": {
+          "attachments": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AttachmentResponse"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "author_id": {
+            "title": "Author Id",
+            "type": "integer"
+          },
+          "board_id": {
+            "title": "Board Id",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ContentStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "board_id",
+          "author_id",
+          "title",
+          "content",
+          "status",
+          "version",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PostDetailResponse",
+        "type": "object"
+      },
       "PostListResponse": {
         "properties": {
           "items": {
@@ -1303,7 +1366,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PostResponse"
+                  "$ref": "#/components/schemas/PostDetailResponse"
                 }
               }
             },

@@ -129,3 +129,20 @@ class AttachmentResponse(BaseModel):
 
 class OriginalUrlResponse(BaseModel):
     url: str
+
+
+class PostDetailResponse(BaseModel):
+    """Post GET response including committed attachments with thumbnail URLs (AC6 grid)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    board_id: int
+    author_id: int
+    title: str
+    content: str
+    status: ContentStatus
+    version: int
+    created_at: datetime
+    updated_at: datetime
+    attachments: list[AttachmentResponse] = []

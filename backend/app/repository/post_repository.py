@@ -20,6 +20,15 @@ class PostRepository:
     def get_by_id(self, post_id: int) -> Post | None:
         return self.db.get(Post, post_id)
 
+    def get_for_update(self, post_id: int) -> Post | None:
+        """Row-locked fetch (SELECT ... FOR UPDATE) to serialize concurrent mutations on a
+        single post — e.g. attachment deletes racing the IMAGE last-image guard (R-05).
+
+        SQLite ignores with_for_update (no row locks), which is fine for single-writer tests;
+        Postgres enforces it in production.
+        """
+        return self.db.get(Post, post_id, with_for_update=True)
+
     def create(
         self,
         *,

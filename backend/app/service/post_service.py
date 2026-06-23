@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.errors import ConflictError, NotFoundError
-from app.models import Board, ContentStatus, Post, User
+from app.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.models import Board, BoardType, ContentStatus, Post, User
 from app.repository.board_repository import BoardRepository
 from app.repository.post_repository import PostRepository
 from app.service.pagination import clamp_limit, decode_cursor, encode_cursor
@@ -35,6 +35,12 @@ class PostService:
     def create_post(self, *, board_id: int, author: User, title: str, content: str) -> Post:
         board = self._get_board_or_404(board_id)
         ensure_can_write_board(board, author)
+        # R-01 / E-01: IMAGE boards require >=1 image, so a no-attachment JSON create is
+        # invalid for them — clients must use the multipart with-attachments route.
+        if board.type is BoardType.IMAGE:
+            raise ValidationFailedError(
+                "Image board posts require at least one image; use the upload endpoint"
+            )
         # No attachments in Phase 3, so the post is COMMITTED immediately. Phase 4 introduces
         # the PENDING→COMMITTED lifecycle when attachments are present (A-03).
         post = self.posts.create(

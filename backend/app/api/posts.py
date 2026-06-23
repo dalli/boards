@@ -5,16 +5,19 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from app.deps import CurrentUser, DbSession, OptionalUser
+from app.deps import CurrentUser, DbSession, OptionalUser, Storage
 from app.schemas import (
+    AttachmentResponse,
     CommentCreateRequest,
     CommentResponse,
     CommentUpdateRequest,
     PostCreateRequest,
+    PostDetailResponse,
     PostListResponse,
     PostResponse,
     PostUpdateRequest,
 )
+from app.service.attachment_service import AttachmentService
 from app.service.comment_service import CommentService
 from app.service.post_service import PostService
 
@@ -54,10 +57,21 @@ def list_posts(
     )
 
 
-@router.get("/posts/{post_id}", response_model=PostResponse)
-def get_post(post_id: int, db: DbSession, viewer: OptionalUser) -> PostResponse:
+@router.get("/posts/{post_id}", response_model=PostDetailResponse)
+def get_post(
+    post_id: int, db: DbSession, storage: Storage, viewer: OptionalUser
+) -> PostDetailResponse:
     post = PostService(db).get_post(post_id=post_id, viewer=viewer)
-    return PostResponse.model_validate(post)
+    # AC6: include committed attachments with presigned thumbnail URLs for the grid.
+    att_service = AttachmentService(db, storage)
+    attachments = att_service.list_attachments(post_id=post_id, viewer=viewer)
+    detail = PostDetailResponse.model_validate(post)
+    detail.attachments = []
+    for a in attachments:
+        resp = AttachmentResponse.model_validate(a)
+        resp.thumbnail_url = att_service.get_thumbnail_url(a)
+        detail.attachments.append(resp)
+    return detail
 
 
 @router.put("/posts/{post_id}", response_model=PostResponse)

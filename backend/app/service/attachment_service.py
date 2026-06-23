@@ -163,7 +163,9 @@ class AttachmentService:
         # RV4-005: bind the nested route's post_id to the attachment's actual post.
         if attachment.post_id != post_id:
             raise NotFoundError("Attachment not found")
-        post = self.posts.get_by_id(attachment.post_id)
+        # R-05: lock the post row so the IMAGE last-image guard and the delete are atomic
+        # w.r.t. other concurrent attachment deletes on the same post.
+        post = self.posts.get_for_update(attachment.post_id)
         if post is None:
             raise NotFoundError("Post not found")
         ensure_owner_or_admin(actor, post.author_id)
