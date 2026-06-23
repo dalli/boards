@@ -20,3 +20,8 @@ dist/
 
 # os/editor
 .DS_Store
+
+.claude/
+.omc/
+.omx/
+tmp/

@@ -79,7 +79,7 @@ graph LR
 
 ## 민감 데이터·시크릿
 
-- JWT secret, DB/MinIO 자격증명은 `.env`(커밋 금지, AGENTS.md §4 보호 대상).
+- JWT secret, DB/MinIO 자격증명은 시크릿(§4 보호 대상): dev/staging은 비커밋 `.env.*`, **prod는 런타임 시크릿 주입**(deployment.md 참조). 어떤 환경에서도 `.env`에 평문 커밋 금지.
 - 로그에 비밀번호·토큰·presigned URL 전체를 남기지 않는다.
 
 ## 위협 모델 요약 (STRIDE 경량)

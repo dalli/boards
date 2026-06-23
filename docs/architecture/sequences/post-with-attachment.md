@@ -35,10 +35,10 @@ sequenceDiagram
           IMG->>S3: 썸네일 업로드(thumbnail_key)
         end
       else S3 업로드 실패
-        Note over SVC,JOB: row는 PENDING으로 남고 commit 안 함<br/>정리 작업이 고아(orphan) 행/객체를 재조정
+        Note over SVC,JOB: PENDING 행은 이미 커밋됨 — COMMITTED 전이만 안 함(롤백/보상 없음, data.md 4단계)<br/>조정 잡이 threshold 초과 PENDING 행·고아 객체를 회수(E-02)
         SVC-->>API: 5xx (업로드 실패)
         API-->>SPA: 작성 실패
-        JOB-->>DB: PENDING 행 정리/롤백(보상 트랜잭션)
+        JOB-->>DB: threshold 초과 PENDING 행 회수(요청 단위 보상 아님, E-02)
         JOB-->>S3: 고아 객체 삭제
       end
     end

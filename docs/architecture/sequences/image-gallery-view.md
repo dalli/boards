@@ -12,7 +12,7 @@ sequenceDiagram
   V->>SPA: 이미지 게시물 선택
   SPA->>API: GET /posts/{id}
   API->>SVC: get_post(id, viewer)
-  SVC->>SVC: 인가 검사(read_role)
+  SVC->>SVC: 인가 검사(Board.read_visibility, E-04)
   SVC->>DB: SELECT post + attachments
   DB-->>SVC: post, attachments[]
   SVC->>S3: 각 thumbnail_key presigned GET 발급

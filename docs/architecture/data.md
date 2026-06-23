@@ -11,7 +11,7 @@
 | 이미지 썸네일 | MinIO/S3 — 버킷 `thumbnails`(또는 prefix) | 파생물, 원본에서 재생성 가능, `thumbnail_key`로 참조 |
 | JWT(access token) | 클라이언트 **메모리 전용**(localStorage 금지, S-01) | 무상태, 서버 미보관, TTL 30분 |
 | 비밀번호 | PostgreSQL(`password_hash`만) | bcrypt 해시, 평문 미저장 |
-| 시크릿(JWT secret, DB/MinIO 자격증명) | 환경변수/`.env`(미커밋) | §4 보호 대상 |
+| 시크릿(JWT secret, DB/MinIO 자격증명) | dev/staging: 비커밋 `.env.*` / prod: 런타임 시크릿 주입(deployment.md) | §4 보호 대상, 평문 커밋 금지 |
 
 ## 일관성·정합성 규칙
 

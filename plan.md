@@ -39,9 +39,9 @@ Python 3.12 + FastAPI + SQLAlchemy/Alembic + PostgreSQL 16 + MinIO(S3) + Pillow 
 
 | contract_id | source_of_truth_path | owner_role | owner_human_approver | producer_paths | consumer_paths | regen_command | drift_check_command |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `boards-api-openapi` | `backend/openapi.json` | `backend` | _(승인 시 기입 — §3.1-4 인간 승인자)_ | `backend/app/api/**`, `backend/openapi.json` | `frontend/src/api/generated/**` | backend: `python -m app.export_openapi > openapi.json` · frontend: `npm run gen:api` | `git diff --exit-code backend/openapi.json` + 프론트 생성물 재생성 후 `git diff --exit-code frontend/src/api/generated` |
+| `boards-api-openapi` | `backend/openapi.json` | `backend` | Cha Sangkug <skcha67@dataspeak.co.kr> (승인일 2026-06-23) | `backend/app/api/**`, `backend/openapi.json` | `frontend/src/api/generated/**` | backend: `python -m app.export_openapi > openapi.json` · frontend: `npm run gen:api` | `git diff --exit-code backend/openapi.json` + 프론트 생성물 재생성 후 `git diff --exit-code frontend/src/api/generated` |
 
-> 생성물(`frontend/src/api/generated/**`)은 수동 수정 금지(§5.1 드리프트 제어). `owner_human_approver`는 인간 최종 승인(§3.1-4) 시 기입한다.
+> 생성물(`frontend/src/api/generated/**`)은 수동 수정 금지(§5.1 드리프트 제어). `owner_human_approver`는 인간 최종 승인(§3.1-4)으로 확정: **Cha Sangkug <skcha67@dataspeak.co.kr>, 2026-06-23 승인**.
 
 ## Phase 분해 (§6.1)
 
@@ -93,7 +93,7 @@ Python 3.12 + FastAPI + SQLAlchemy/Alembic + PostgreSQL 16 + MinIO(S3) + Pillow 
 1. AGENTS.md §3.4 산출물 존재 점검(스크립트). ✅ 통과
 2. AC1~AC8 자체 점검 추적표(§3.2-1).
 3. codex 플러그인 교차 검증(§3.1-2) — 독립 세션. ✅ 완료(아래 §교차 검증 기록)
-4. 인간 개발자 최종 승인(§3.1-4). ⏳ 대기
+4. 인간 개발자 최종 승인(§3.1-4). ✅ 승인 — Cha Sangkug <skcha67@dataspeak.co.kr>, 2026-06-23
 
 ## 교차 검증 기록 (Cross-Review Record, §3.1-2)
 
@@ -161,6 +161,7 @@ S-01(JWT 저장 전략 단일화), S-02(토큰 TTL·로그아웃·폐기 정의)
 | --- | --- |
 | reviewer_id | codex (codex:codex-rescue, --fresh) |
 | model_id | gpt-5.x-codex (독립 모델) |
+| session_id | _(원본 미기록 — NV3-001) codex thread 사후 복구 불가. 완전 감사 필드는 아래 v3 재검증 기록이 대체하며, 이후 모든 리뷰는 session_id를 필수 기록한다._ |
 | 검토 대상 커밋 | 88c30bb7537ce7835fcab92a5ac14cec65722728 (v2) |
 | draft 해시(plan.md, SHA-256) | 89c4f8756c11b96297b2c84263244e3acfe13a8d6a44d1d31dd64e3d24681ccc |
 | 재검토 시각(UTC) | 2026-06-23T08:00Z |
@@ -183,3 +184,56 @@ S-01(JWT 저장 전략 단일화), S-02(토큰 TTL·로그아웃·폐기 정의)
 | P-01 잔여 | blocking | Accepted | 본 v3 갱신 후 인간 최종 승인으로 종료 예정. |
 
 > v3 갱신으로 plan.md 해시가 다시 변경됨 → 본 v2 리뷰도 무효화. **남은 절차는 인간 최종 승인(§3.1-4)**. (추가 codex 라운드는 인간 판단으로 선택 가능)
+
+## 교차 재검증 기록 v3 (Re-Review, §3.1-2)
+
+| 항목 | 값 |
+| --- | --- |
+| reviewer_id | codex (codex:codex-rescue) |
+| model_id | gpt-5.x-codex (Primary Planner=Claude와 독립 모델) |
+| session_id | codex thread 019ef39d-d953-72c1-bbdf-547579cc591c |
+| 검토 대상 커밋 | 82db75565de5f6ee06d5287704daa984fd4036d3 (v3) |
+| draft 해시(plan.md, SHA-256) | e0b57b64d815160e115e8c2faa6a4cd05e314dd8e0ec711065bcf02535bba72c |
+| 재검토 시각(UTC) | 2026-06-23T08:38Z |
+| 결과 | v2 blocking 중 3건 RESOLVED 확인(V2-RES-001/003/007), 7건 PARTIAL(문서 간 잔여 모순), 신규 high 1건(NV3-001) |
+
+> 신선도 바인딩(§3.1-2): 본 v3 리뷰는 위 해시 시점 기준이다. 아래 조정(v4 문서 수정)으로 plan.md 해시가 변경되면 본 리뷰는 자동 무효화된다.
+
+### v3 재검증 이의 처리 (§3.1-3)
+
+각 지적을 Accepted / Rejected / Escalated로 분류한다. blocking·security 지적은 인간 승인자 판정 전까지 구현으로 넘어갈 수 없다(§3.1-3, §4).
+
+| ID | sev | 판정 | 조치(v4) |
+| --- | --- | --- | --- |
+| V2-RES-001 | blocking | **RESOLVED**(무조치) | NV2-001 status 컬럼이 POST/ATTACHMENT 양쪽 존재 확인(db-schema.md status 컬럼·인덱스 노트). |
+| V2-RES-003 | blocking | **RESOLVED**(무조치) | E-01 불변식 + S3 선삭제 순서 정합 확인(security.md IMAGE 불변식, db-schema.md FK RESTRICT, attachment-delete-and-invariant.md). |
+| V2-RES-007 | high | **RESOLVED**(무조치) | presigned PUT 미사용 일관 확인(plan.md Phase 4, system.md, ADR-0003). |
+| V2-RES-002 | blocking | **Accepted** | DB-S3 실패 생명주기 모순 해소: post-with-attachment.md 시퀀스의 "commit 안 함/롤백(보상 트랜잭션)"을 data.md 4단계("PENDING 행은 이미 커밋, 롤백 없음 → 조정 잡 회수")와 정합하도록 수정. |
+| V2-RES-005 | high | **Accepted** | db-schema.md ER 다이어그램의 email "unique"를 부분 유니크(WHERE deleted_at IS NULL)로 정정 — 제약 본문과 정합. |
+| V2-RES-006 | high | **Accepted** | prod 시크릿 표현 통일: security.md·spec·data.md를 deployment.md(런타임 시크릿 주입)와 정합. |
+| V2-RES-008 | high | **Accepted** | image-gallery-view.md `read_role`→`read_visibility` 정정, spec AC4를 read_visibility 한정으로 수정. |
+| V2-RES-009 | medium | **Accepted** | db-schema.md에 "페이지네이션 계약(E-06)" 절 신설(커서=(created_at,id) 키셋, limit 기본20/상한100, tie-breaker id DESC) + 인덱스에 id DESC 추가. |
+| NV3-001 | high | **Accepted** | v2 재검증 기록의 session_id 누락 보강: 원본 thread 사후 복구 불가 → 본 v3 기록이 완전 감사 필드(session_id 포함)로 대체. 이후 모든 리뷰는 session_id 필수 기록. |
+| V2-RES-004 | blocking | **Accepted(절차)** | owner_human_approver 공란은 산출물 결함이 아니라 §3.1-4 게이트: 인간 최종 승인 시 기입(P-01과 동일 게이트에서 종료). |
+| V2-RES-010 | blocking | **Accepted(절차)** | 인간 승인 미완은 의도된 차단 상태(BLOCKED 아님, 대기). P-01 인간 최종 승인으로 종료. |
+
+### v3 조정 결과 요약
+
+- RESOLVED 확인(무조치): 3건 — V2-RES-001/003/007.
+- v4 문서 수정으로 Accepted: 6건 — V2-RES-002/005/006/008/009, NV3-001.
+- 절차상 Accepted(인간 승인 게이트에서 종료): 2건 — V2-RES-004/010.
+- Rejected: 0건. Escalated(신규): 0건.
+
+> v4 문서 수정으로 plan.md 해시가 다시 변경됨 → 본 v3 리뷰도 신선도(§3.1-2)에 따라 무효화된다. **남은 절차: 인간 최종 승인(§3.1-4, P-01).** 추가 codex 라운드는 인간 판단으로 선택 가능.
+
+## 인간 최종 승인 기록 (Human Final Approval, §3.1-4)
+
+| 항목 | 값 |
+| --- | --- |
+| 승인자 | Cha Sangkug <skcha67@dataspeak.co.kr> |
+| 승인일 | 2026-06-23 |
+| 승인 범위 | blocking 전건(P-01, A-01 포함) 및 본 plan.md/아키텍처 산출물 |
+| 게이트 종료 | **A-01**(owner_human_approver 확정 기입 완료) · **P-01**(인간 최종 승인 완료) |
+| 비고 | 승인자가 본 계약 소유권 표(§공유 계약 소유권)와 검증 절차(§검증 절차) 4단계를 승인. 인간 승인 게이트에서 종료 예정이던 V2-RES-004/010도 본 승인으로 종료. |
+
+> 본 승인으로 §3.1-4 인간 승인 게이트가 종료된다. 이후 plan.md가 변경되면 신선도 바인딩(§3.1-2)에 따라 재승인이 필요하다.

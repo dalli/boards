@@ -12,7 +12,7 @@ erDiagram
 
   USER {
     bigint id PK
-    varchar email UK "NOT NULL, unique"
+    varchar email "NOT NULL, 부분 유니크 WHERE deleted_at IS NULL (NV2-003)"
     varchar password_hash "NOT NULL (bcrypt)"
     varchar role "NOT NULL, enum USER|ADMIN, default USER"
     timestamptz created_at "NOT NULL, default now()"
@@ -63,7 +63,7 @@ erDiagram
 
 - UNIQUE: `BOARD.slug`, `ATTACHMENT.storage_key`, **`ATTACHMENT.thumbnail_key`(부분 유니크 — `WHERE thumbnail_key IS NOT NULL`)** (A-05).
   - **`USER.email`(NV2-003)**: 활성 사용자에 대해서만 유니크 — **부분 유니크 `WHERE deleted_at IS NULL`**. 소프트 삭제 시 service가 email을 비식별화(예: `deleted+{id}@…`)하여 동일 이메일 재가입을 허용한다.
-- 인덱스: `POST(board_id, status, created_at DESC)` — 목록은 `status='COMMITTED'`만 노출하므로 status 포함(E-06 커서 페이지네이션). `COMMENT(post_id, created_at)`, `ATTACHMENT(post_id)`.
+- 인덱스: `POST(board_id, status, created_at DESC, id DESC)` — 목록은 `status='COMMITTED'`만 노출하므로 status 포함, 안정 정렬 tie-breaker로 `id DESC` 포함(E-06 키셋 커서 페이지네이션). `COMMENT(post_id, created_at)`, `ATTACHMENT(post_id)`.
 - **상태 컬럼(ADR-0005, NV2-001)**: `POST.status`/`ATTACHMENT.status`는 PENDING→COMMITTED. 사용자에게는 `COMMITTED`만 서빙. 조정 잡이 threshold 초과 PENDING 회수.
 - **FK별 삭제 동작(A-04) + S3 삭제 순서(NV2-002)** — 일괄 CASCADE 금지:
   - `POST.author_id → USER`: `ON DELETE RESTRICT` (사용자 소프트 삭제, 콘텐츠 보존 — ADR-0006).
@@ -74,6 +74,16 @@ erDiagram
 - enum은 PostgreSQL enum 타입 또는 CHECK 제약으로 강제(ADR-0002 참조).
 - `BOARD.read_visibility`(E-04): ADMIN이 게시판 생성 시 지정. `PUBLIC`=비인증 포함 읽기, `AUTHENTICATED`=인증 사용자만 읽기.
 - `POST.version`(E-05): 수정 시 낙관적 잠금. 클라이언트가 보유 version과 불일치하면 409 Conflict.
+
+## 페이지네이션 계약 (E-06)
+
+목록 API는 커서 기반(키셋) 페이지네이션을 따른다.
+- **정렬 키**: `(created_at DESC, id DESC)`. `created_at` 동률을 `id`로 안정 분해(tie-breaker)하여 페이지 경계 누락/중복을 방지.
+- **커서**: 마지막 행의 `(created_at, id)`를 불투명(opaque) 토큰으로 base64url 인코딩. 서버는 `WHERE (created_at, id) < (cursor_created_at, cursor_id)` 키셋 조건으로 다음 페이지를 조회(오프셋 미사용).
+- **limit**: 기본 20, **상한 100**. 상한 초과 요청은 100으로 클램프.
+- **응답 계약**: `{ items: [...], next_cursor }`. 다음 페이지가 없으면 `next_cursor=null`.
+- 인덱스 `POST(board_id, status, created_at DESC, id DESC)`가 키셋 조건을 커버.
+- 경계 테스트(plan.md AC9): 빈 결과, 정확히 limit개, limit+1개, created_at 동률 다수, 상한 초과 limit 클램프.
 
 ## 마이그레이션/버전 전략
 
