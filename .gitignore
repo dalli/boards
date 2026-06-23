@@ -1,0 +1,22 @@
+# secrets & env (AGENTS.md §4 protected)
+.env
+*.env
+!.env.example
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# node
+node_modules/
+dist/
+.vite/
+
+# os/editor
+.DS_Store
