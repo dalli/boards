@@ -9,7 +9,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: ${POSTGRES_DB:-boards}
     ports:
-      - "5432:5432"
+      # Host-side port is overridable to avoid clashing with a host Postgres; the container
+      # always listens on 5432 internally (other services connect via the service name).
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

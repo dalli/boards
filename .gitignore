@@ -1,6 +1,7 @@
 # secrets & env (AGENTS.md §4 protected)
 .env
 *.env
+.env.*
 !.env.example
 
 # python
