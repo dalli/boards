@@ -6,13 +6,25 @@ keeping HTTP concerns at the edge (§5 layering).
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.config import get_settings
 from app.errors import AppError
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Boards API", version="0.1.0")
+
+    # CORS: the SPA is a separate browser origin (e.g. :5173) calling the API (:8000), so the
+    # browser issues a preflight that must be answered. Origins are allowlisted via settings.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=get_settings().cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.exception_handler(AppError)
     async def _app_error_handler(_: Request, exc: AppError) -> JSONResponse:

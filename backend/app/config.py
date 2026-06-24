@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+psycopg://boards:boards@localhost:5432/boards"
 
+    # CORS: browser origins allowed to call the API (frontend SPA). Comma-separated in env.
+    cors_allow_origins: str = "http://localhost:5173"
+
     # Auth (S-02): HS256, 30 min access token TTL
     jwt_secret: str = "dev-insecure-change-me"
     jwt_algorithm: str = "HS256"
@@ -41,6 +44,10 @@ class Settings(BaseSettings):
     # Initial admin seed (Y-02); password injected via env, never committed
     seed_admin_email: str = "admin@example.com"
     seed_admin_password: str | None = None
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
 
     @field_validator("bcrypt_rounds")
     @classmethod
