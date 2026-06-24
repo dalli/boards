@@ -21,3 +21,39 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   }
   return fetch(`${BASE_URL}${path}`, { ...init, headers });
 }
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public detail: string,
+  ) {
+    super(detail);
+    this.name = "ApiError";
+  }
+}
+
+async function toError(resp: Response): Promise<ApiError> {
+  let detail = resp.statusText;
+  try {
+    const body = await resp.json();
+    if (body && typeof body.detail === "string") detail = body.detail;
+  } catch {
+    // non-JSON body; keep statusText
+  }
+  return new ApiError(resp.status, detail);
+}
+
+/** JSON request returning parsed body, throwing ApiError on non-2xx. */
+export async function apiJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const resp = await apiFetch(path, init);
+  if (!resp.ok) throw await toError(resp);
+  if (resp.status === 204) return undefined as T;
+  return (await resp.json()) as T;
+}
+
+/** Multipart request (FormData) returning parsed body, throwing ApiError on non-2xx. */
+export async function apiForm<T>(path: string, form: FormData): Promise<T> {
+  const resp = await apiFetch(path, { method: "POST", body: form });
+  if (!resp.ok) throw await toError(resp);
+  return (await resp.json()) as T;
+}
